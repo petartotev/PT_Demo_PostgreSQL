@@ -15,19 +15,19 @@ PT_Demo_PostgreSQL is a simple .NET 8 Console Application to test connectivity w
 docker pull postgres:latest
 ```
 
-2. Next, run the following Docker command in cmd.exe in order to run the pulled image in a container `postgres`:
+2. Next, run the following Docker command in cmd.exe in order to run the pulled `postgres` image in a container named `postgrescntr` on port 5432:
 
 ```
 docker run --name postgrescntr -e POSTGRES_PASSWORD=test1234 -p 5432:5432 -d postgres
 ```
 
-3. Connect to the database usind [DBeaver](https://dbeaver.io/download/) or [pgAdmin](https://www.pgadmin.org/download/):
+3. Connect to the database using [DBeaver](https://dbeaver.io/download/) or [pgAdmin](https://www.pgadmin.org/download/):
 
 ![dbeaver-scrot](./res/scrot_dbeaver_connect.png)
 
 ## Codebase
 
-In order to connect to the postgres database, you need to install the latest Npgsql NuGet package.
+In order to connect to the `postgres` database, you need to install the latest [Npgsql NuGet package](https://www.nuget.org/packages/Npgsql/).
 
 ## Links
 - https://www.docker.com/blog/how-to-use-the-postgres-docker-official-image/
