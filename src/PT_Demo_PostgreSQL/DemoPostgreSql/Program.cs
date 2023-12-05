@@ -6,6 +6,8 @@ public class Program
     {
         var sqlManager = new SqlManager();
 
+        // Persons (relational database)
+
         await sqlManager.CreateTablePersonsAsync();
 
         await sqlManager.InsertIntoPersonsAsync("Johnny", "Cash", "0", "Burgas", "123 Krum Popov str.");
@@ -18,6 +20,22 @@ public class Program
 
         await PrintAllPersonEntitiesAsync(people);
 
+        // Employees (object-relational database)
+
+        await sqlManager.CreateTableEmployeesAsync();
+
+        sqlManager.InsertIntoEmployees(new Employee { FirstName = "John", LastName = "Romero", BirthDate = new DateTime(1954, 7, 15), EmployeeId = 1 });
+        sqlManager.InsertIntoEmployees(new Employee { FirstName = "John", LastName = "Carmack", BirthDate = new DateTime(1957, 8, 28), EmployeeId = 2 });
+        sqlManager.InsertIntoEmployees(new Employee { FirstName = "John", LastName = "Snow", BirthDate = new DateTime(1966, 6, 16), EmployeeId = 3 });
+
+        var employees = sqlManager.GetAllEmployees();
+
+        await PrintAllEmployeeEntitiesAsync(employees);
+
+        var chosenEmployee = sqlManager.GetEmployeeById(2);
+
+        await PrintEmployeeAsync(chosenEmployee);
+
         return 0;
     }
 
@@ -25,7 +43,20 @@ public class Program
     {
         foreach (var person in people)
         {
-            await Console.Out.WriteLineAsync($"{person.FirstName} {person.LastName}, {person.Gender}, lives in {person.City}, {person.Address}.");
+            await Console.Out.WriteLineAsync($"Person {person.FirstName} {person.LastName}, {person.Gender}, lives in {person.City}, {person.Address}.");
         }
+    }
+
+    private static async Task PrintAllEmployeeEntitiesAsync(List<Employee> employees)
+    {
+        foreach (var employee in employees)
+        {
+            await PrintEmployeeAsync(employee);
+        }
+    }
+
+    private static async Task PrintEmployeeAsync(Employee employee)
+    {
+        await Console.Out.WriteLineAsync($"Employee {employee.FirstName} {employee.LastName} with employee ID {employee.EmployeeId} was born in {employee.BirthDate.ToString("yyyy-MM-dd")}.");
     }
 }

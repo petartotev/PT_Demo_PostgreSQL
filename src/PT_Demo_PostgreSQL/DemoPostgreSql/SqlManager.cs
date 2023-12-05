@@ -1,11 +1,14 @@
-﻿using Npgsql;
+﻿using Newtonsoft.Json;
+using Npgsql;
+using NpgsqlTypes;
 
 namespace DemoPostgreSql;
 
 public class SqlManager
 {
-    private readonly string _connectionString = "Host=localhost;Port=5432;Username=postgres;Password=testmest1234;Database=postgres";
+    private readonly string _connectionString = "Host=localhost;Port=5432;Username=postgres;Password=test1234;Database=postgres";
 
+    // ==================== Persons ====================
     public async Task CreateTablePersonsAsync()
     {
         var dataSourceBuilder = new NpgsqlDataSourceBuilder(_connectionString);
@@ -13,16 +16,16 @@ public class SqlManager
 
         var conn = await dataSource.OpenConnectionAsync();
 
-        // Create Table Persons
+        // Create Table Persons:
         var cmdCreateTable =
             @"CREATE TABLE Persons(
-                PersonID SERIAL PRIMARY KEY NOT NULL,
-                FirstName varchar(255),
-                LastName varchar(255),
-                Gender varchar(1),
-                Address varchar(255),
-                City varchar(255)
-                );";
+              PersonID SERIAL PRIMARY KEY NOT NULL,
+              FirstName varchar(255),
+              LastName varchar(255),
+              Gender varchar(1),
+              Address varchar(255),
+              City varchar(255)
+              );";
 
         await using (var cmd = new NpgsqlCommand(cmdCreateTable, conn))
         {
@@ -100,5 +103,91 @@ public class SqlManager
         }
 
         return personsList;
+    }
+
+    // ==================== Employees ====================
+    public async Task CreateTableEmployeesAsync()
+    {
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(_connectionString);
+        var dataSource = dataSourceBuilder.Build();
+
+        var conn = await dataSource.OpenConnectionAsync();
+
+        // Create Table Employees using the features of an object-relational database:
+        var cmdCreateTable =
+            @"CREATE TABLE Employees (
+              EmployeeId SERIAL PRIMARY KEY,
+              EmployeeData JSONB
+              );";
+
+        await using (var cmd = new NpgsqlCommand(cmdCreateTable, conn))
+        {
+            await cmd.ExecuteNonQueryAsync();
+        }
+    }
+
+    public void InsertIntoEmployees(Employee employee)
+    {
+        using (var connection = new NpgsqlConnection(_connectionString))
+        {
+            connection.Open();
+
+            var json = JsonConvert.SerializeObject(employee);
+
+            using (var command = new NpgsqlCommand("INSERT INTO Employees (EmployeeData) VALUES (@employeeData)", connection))
+            {
+                command.Parameters.AddWithValue("employeeData", NpgsqlDbType.Jsonb, json);
+                command.ExecuteNonQuery();
+            }
+        }
+    }
+
+    public List<Employee> GetAllEmployees()
+    {
+        var employees = new List<Employee>();
+
+        using (var connection = new NpgsqlConnection(_connectionString))
+        {
+            connection.Open();
+
+            using (var command = new NpgsqlCommand("SELECT EmployeeData FROM Employees", connection))
+            {
+                using (NpgsqlDataReader reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        string json = reader.GetString(0);
+                        Employee employee = JsonConvert.DeserializeObject<Employee>(json);
+                        employees.Add(employee);
+                    }
+                }
+            }
+        }
+
+        return employees;
+    }
+
+    public Employee GetEmployeeById(int employeeId)
+    {
+        using (var connection = new NpgsqlConnection(_connectionString))
+        {
+            connection.Open();
+
+            using (var command = new NpgsqlCommand("SELECT EmployeeData FROM Employees WHERE EmployeeId = @employeeId", connection))
+            {
+                command.Parameters.AddWithValue("employeeId", employeeId);
+
+                using (NpgsqlDataReader reader = command.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        string json = reader.GetString(0);
+                        return JsonConvert.DeserializeObject<Employee>(json);
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 }
