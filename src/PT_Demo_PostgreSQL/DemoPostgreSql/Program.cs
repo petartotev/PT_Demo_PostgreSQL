@@ -1,4 +1,6 @@
-﻿namespace DemoPostgreSql;
+﻿using DemoPostgreSql.Models;
+
+namespace DemoPostgreSql;
 
 public class Program
 {
@@ -6,7 +8,7 @@ public class Program
     {
         var sqlManager = new SqlManager();
 
-        // Persons (relational database)
+        #region Persons
 
         await sqlManager.CreateTablePersonsAsync();
 
@@ -20,7 +22,9 @@ public class Program
 
         await PrintAllPersonEntitiesAsync(people);
 
-        // Employees (object-relational database)
+        #endregion
+
+        #region Employees
 
         await sqlManager.CreateTableEmployeesAsync();
 
@@ -35,6 +39,19 @@ public class Program
         var chosenEmployee = sqlManager.GetEmployeeById(2);
 
         await PrintEmployeeAsync(chosenEmployee);
+
+        #endregion
+
+        #region Students
+
+        await sqlManager.CreateTypeAddressAsync();
+        await sqlManager.CreateTableStudentsAsync();
+        await sqlManager.CreateTableStudentsContactsAsync();
+
+        sqlManager.InsertIntoStudents();
+        sqlManager.GetAllStudents();
+
+        #endregion
 
         return 0;
     }

@@ -1,4 +1,4 @@
-﻿namespace DemoPostgreSql;
+﻿namespace DemoPostgreSql.Models;
 
 public class PersonEntity
 {
