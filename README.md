@@ -72,6 +72,8 @@ zip_code VARCHAR);
  address Address);
 ```
 
+![type-address-in-students-table](./res/scrot_dbeaver_type-address-in-students-table.png)
+
 ## MySQL vs PostgreSQL Comparison
 
 | Feature           | MySQL                                            | PostgreSQL                          |
