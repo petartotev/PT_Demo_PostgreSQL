@@ -6,6 +6,8 @@ public class Program
 {
     public static async Task<int> Main()
     {
+        CommandManager.Execute("docker rm -f postgrescntr && docker run --name postgrescntr -e POSTGRES_PASSWORD=test1234 -p 5432:5432 -d postgres");
+
         var sqlManager = new SqlManager();
 
         #region Persons
@@ -20,7 +22,7 @@ public class Program
 
         var people = await sqlManager.GetAllPersonsAsync();
 
-        await PrintAllPersonEntitiesAsync(people);
+        await PrintManager.PrintAllPersonEntitiesAsync(people);
 
         #endregion
 
@@ -34,11 +36,11 @@ public class Program
 
         var employees = sqlManager.GetAllEmployees();
 
-        await PrintAllEmployeeEntitiesAsync(employees);
+        await PrintManager.PrintAllEmployeeEntitiesAsync(employees);
 
         var chosenEmployee = sqlManager.GetEmployeeById(2);
 
-        await PrintEmployeeAsync(chosenEmployee);
+        await PrintManager.PrintEmployeeAsync(chosenEmployee);
 
         #endregion
 
@@ -46,34 +48,17 @@ public class Program
 
         await sqlManager.CreateTypeAddressAsync();
         await sqlManager.CreateTableStudentsAsync();
-        await sqlManager.CreateTableStudentsContactsAsync();
 
-        sqlManager.InsertIntoStudents();
-        sqlManager.GetAllStudents();
+        sqlManager.InsertIntoStudents(new Student { StudentId = 1, FirstName = "Petar", LastName = "Totev", Age = 34, Address = new ("23 ML", "Burgas", "Burgas", "8000")});
+        sqlManager.InsertIntoStudents(new Student { StudentId = 2, FirstName = "Maya", LastName = "Toteva", Age = 1, Address = new ("2 MKV", "Sofia", "Sofia", "1000")});
+        sqlManager.InsertIntoStudents(new Student { StudentId = 2, FirstName = "Mark", LastName = "Twain", Age = 123, Address = new ("66 Route", "Illinois", "Detroit", "115315")});
+
+        var students = sqlManager.GetAllStudents();
+
+        await PrintManager.PrintAllStudentEntitiesAsync(students);
 
         #endregion
 
         return 0;
-    }
-
-    private static async Task PrintAllPersonEntitiesAsync(List<PersonEntity> people)
-    {
-        foreach (var person in people)
-        {
-            await Console.Out.WriteLineAsync($"Person {person.FirstName} {person.LastName}, {person.Gender}, lives in {person.City}, {person.Address}.");
-        }
-    }
-
-    private static async Task PrintAllEmployeeEntitiesAsync(List<Employee> employees)
-    {
-        foreach (var employee in employees)
-        {
-            await PrintEmployeeAsync(employee);
-        }
-    }
-
-    private static async Task PrintEmployeeAsync(Employee employee)
-    {
-        await Console.Out.WriteLineAsync($"Employee {employee.FirstName} {employee.LastName} with employee ID {employee.EmployeeId} was born in {employee.BirthDate.ToString("yyyy-MM-dd")}.");
     }
 }

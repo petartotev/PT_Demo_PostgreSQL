@@ -71,9 +71,9 @@ public class SqlManager
         }
     }
 
-    public async Task<List<PersonEntity>> GetAllPersonsAsync()
+    public async Task<List<Person>> GetAllPersonsAsync()
     {
-        List<PersonEntity> personsList = new();
+        List<Person> personsList = new();
 
         var dataSourceBuilder = new NpgsqlDataSourceBuilder(_connectionString);
         var dataSource = dataSourceBuilder.Build();
@@ -89,7 +89,7 @@ public class SqlManager
                 // Iterate through the rows and map data to PersonsEntity objects
                 while (reader.Read())
                 {
-                    var person = new PersonEntity
+                    var person = new Person
                     {
                         PersonId = reader.GetInt32(reader.GetOrdinal("PersonId")),
                         FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
@@ -208,7 +208,7 @@ public class SqlManager
 
         // Create Type Address:
         var cmdCreateType =
-            @"CREATE TYPE address_type AS (
+            @"CREATE TYPE Address AS (
               street VARCHAR,
               city VARCHAR,
               state VARCHAR,
@@ -216,6 +216,28 @@ public class SqlManager
               );";
 
         await using (var cmd = new NpgsqlCommand(cmdCreateType, conn))
+        {
+            await cmd.ExecuteNonQueryAsync();
+        }
+    }
+
+    public async Task CreateFunctionGetAddressAsync()
+    {
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(_connectionString);
+        var dataSource = dataSourceBuilder.Build();
+
+        var conn = await dataSource.OpenConnectionAsync();
+
+        // Create Function get_address:
+        var cmdCreateFunction =
+            @"CREATE FUNCTION get_address(p_address Address)
+              RETURNS TABLE(street VARCHAR, city VARCHAR, state VARCHAR, zip_code VARCHAR) AS $$
+              BEGIN
+                  RETURN QUERY SELECT (p_address).street, (p_address).city, (p_address).state, (p_address).zip_code;
+              END; $$
+              LANGUAGE plpgsql;";
+
+        await using (var cmd = new NpgsqlCommand(cmdCreateFunction, conn))
         {
             await cmd.ExecuteNonQueryAsync();
         }
@@ -230,12 +252,12 @@ public class SqlManager
 
         // Create Table Students:
         var cmdCreateTable =
-            @"CREATE TABLE students (
-              student_id SERIAL PRIMARY KEY,
-              first_name VARCHAR NOT NULL,
-              last_name VARCHAR NOT NULL,
-              birth_date DATE NOT NULL,
-              address address_type
+            @"CREATE TABLE Students (
+              studentid SERIAL PRIMARY KEY,
+              firstname VARCHAR,
+              lastname VARCHAR,
+              age INT,
+              address Address
               );";
 
         await using (var cmd = new NpgsqlCommand(cmdCreateTable, conn))
@@ -244,109 +266,53 @@ public class SqlManager
         }
     }
 
-    public async Task CreateTableStudentsContactsAsync()
+    public void InsertIntoStudents(Student student)
     {
-        var dataSourceBuilder = new NpgsqlDataSourceBuilder(_connectionString);
-        var dataSource = dataSourceBuilder.Build();
+        using var conn = new NpgsqlConnection(_connectionString);
+        conn.Open();
 
-        var conn = await dataSource.OpenConnectionAsync();
+        var cmdInsert =
+            @"INSERT INTO Students (firstname, lastname, age, address)
+              VALUES (@firstname, @lastname, @age, ROW(@street, @city, @state, @zip_code)::Address)";
 
-        // Create Table Student Contacts:
-        var cmdCreateTable =
-            @"CREATE TABLE student_contacts (
-              student_id SERIAL PRIMARY KEY,
-              email VARCHAR,
-              phone_number VARCHAR,
-              CONSTRAINT fk_student FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE
-              );";
+        using var cmd = new NpgsqlCommand(cmdInsert, conn);
 
-        await using (var cmd = new NpgsqlCommand(cmdCreateTable, conn))
-        {
-            await cmd.ExecuteNonQueryAsync();
-        }
+        cmd.Parameters.AddWithValue("firstname", student.FirstName);
+        cmd.Parameters.AddWithValue("lastname", student.LastName);
+        cmd.Parameters.AddWithValue("age", student.Age);
+        cmd.Parameters.AddWithValue("street", student.Address.Street);
+        cmd.Parameters.AddWithValue("city", student.Address.City);
+        cmd.Parameters.AddWithValue("state", student.Address.State);
+        cmd.Parameters.AddWithValue("zip_code", student.Address.ZipCode);
+        cmd.ExecuteNonQuery();
     }
 
-    public void InsertIntoStudents()
+    public List<Student> GetAllStudents()
     {
-        using (var connection = new NpgsqlConnection(_connectionString))
+        var students = new List<Student>();
+
+        using var conn = new NpgsqlConnection(_connectionString);
+        conn.Open();
+
+        using var cmd = new NpgsqlCommand("SELECT studentid, firstname, lastname, age, (address).street, (address).city, (address).state, (address).zip_code FROM Students", conn);
+        using var reader = cmd.ExecuteReader();
+
+        while (reader.Read())
         {
-            connection.Open();
-
-            //var sql = 
-            //    @"INSERT INTO students (first_name, last_name, birth_date, address)
-            //      VALUES (@firstName, @lastName, @birthDate, @address)
-            //      RETURNING student_id;";
-
-            var sql =
-                  @"INSERT INTO students (first_name, last_name, birth_date)
-                  VALUES (@firstName, @lastName, @birthDate)
-                  RETURNING student_id;";
-
-            using (var command = new NpgsqlCommand(sql, connection))
+            students.Add(new Student
             {
-                command.Parameters.AddWithValue("firstName", "John");
-                command.Parameters.AddWithValue("lastName", "Doe");
-                command.Parameters.AddWithValue("birthDate", new DateTime(1990, 1, 1));
-
-                //// Serialize the Address object to JSON
-                //var address = JsonConvert.SerializeObject(new Address { Street = "123 Main St", City = "Cityville", State = "CA", ZipCode = "12345" });
-
-                //// Use NpgsqlDbType.Jsonb for the 'address' parameter
-                //command.Parameters.AddWithValue("address", NpgsqlDbType.Jsonb, address);
-
-                int studentId = (int)command.ExecuteScalar();
-
-                // Insert additional contact information
-                using (NpgsqlCommand contactCommand = new NpgsqlCommand(@"
-                    INSERT INTO student_contacts (student_id, email, phone_number)
-                    VALUES (@studentId, @email, @phoneNumber)", connection))
-                {
-                    contactCommand.Parameters.AddWithValue("studentId", studentId);
-                    contactCommand.Parameters.AddWithValue("email", "john.doe@example.com");
-                    contactCommand.Parameters.AddWithValue("phoneNumber", "555-1234");
-
-                    contactCommand.ExecuteNonQuery();
-                }
-            }
+                StudentId = reader.GetInt32(0),
+                FirstName = reader.GetString(1),
+                LastName = reader.GetString(2),
+                Age = reader.GetInt32(3),
+                Address = (reader.GetString(4),
+                           reader.GetString(5),
+                           reader.GetString(6),
+                           reader.GetString(7))
+            });
         }
-    }
 
-    public void GetAllStudents()
-    {
-        using (var connection = new NpgsqlConnection(_connectionString))
-        {
-            connection.Open();
-
-            using (var command = new NpgsqlCommand(@"
-                SELECT s.*, c.email, c.phone_number
-                FROM students s
-                LEFT JOIN student_contacts c ON s.student_id = c.student_id", connection))
-            {
-                using (NpgsqlDataReader reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        var student = new Student
-                        {
-                            StudentId = reader.GetInt32(0),
-                            FirstName = reader.GetString(1),
-                            LastName = reader.GetString(2),
-                            BirthDate = reader.GetDateTime(3),
-                            //Address = JsonConvert.DeserializeObject<Address>(reader.GetString(4)),
-
-                            // Additional contact information
-                            Email = reader.IsDBNull(5) ? null : reader.GetString(5),
-                            PhoneNumber = reader.IsDBNull(6) ? null : reader.GetString(6),
-                        };
-
-                        Console.WriteLine($"StudentId: {student.StudentId}, FirstName: {student.FirstName}, LastName: {student.LastName}, BirthDate: {student.BirthDate}");
-                        //Console.WriteLine($"Address: {student.Address.Street}, {student.Address.City}, {student.Address.State} {student.Address.ZipCode}");
-                        Console.WriteLine($"Email: {student.Email ?? "N/A"}, PhoneNumber: {student.PhoneNumber ?? "N/A"}");
-                        Console.WriteLine();
-                    }
-                }
-            }
-        }
+        return students;
     }
 
     #endregion

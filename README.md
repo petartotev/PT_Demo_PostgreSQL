@@ -5,6 +5,9 @@ PT_Demo_PostgreSQL is a simple .NET 8 Console Application to test connectivity w
 
 - [Initial Setup](#initial-setup)
 - [Codebase](#codebase)
+    - [Demo Persons](#demo-persons) - create simple table
+    - [Demo Employees](#demo-employees) - create table that stores objects as `JSONB`
+    - [Demo Students](#demo-students) - create table using `TYPE` that stores objects having a complex property (Address)
 - [MySQL vs PostgreSQL Comparison](#mysql-vs-postgresql-comparison)
 - [Links](#links)
 
@@ -30,6 +33,45 @@ docker run --name postgrescntr -e POSTGRES_PASSWORD=test1234 -p 5432:5432 -d pos
 
 In order to connect to the `postgres` database, you need to install the latest [Npgsql NuGet package](https://www.nuget.org/packages/Npgsql/).
 
+### Demo Persons
+
+```
+CREATE TABLE Persons(
+PersonID SERIAL PRIMARY KEY NOT NULL,
+FirstName varchar(255),
+LastName varchar(255),
+Gender varchar(1),
+Address varchar(255),
+City varchar(255));
+```
+
+### Demo Employees
+
+```
+CREATE TABLE Employees (
+EmployeeId SERIAL PRIMARY KEY,
+EmployeeData JSONB);
+```
+
+### Demo Students
+
+```
+CREATE TYPE Address AS (
+street VARCHAR,
+city VARCHAR,
+state VARCHAR,
+zip_code VARCHAR);
+```
+
+```
+ CREATE TABLE Students (
+ studentid SERIAL PRIMARY KEY,
+ firstname VARCHAR,
+ lastname VARCHAR,
+ age INT,
+ address Address);
+```
+
 ## MySQL vs PostgreSQL Comparison
 
 | Feature           | MySQL                                            | PostgreSQL                          |
@@ -48,4 +90,3 @@ In order to connect to the `postgres` database, you need to install the latest [
 - https://www.dronahq.com/best-postgresql-guis/
 - https://github.com/npgsql/npgsql
 - https://stackoverflow.com/questions/7718585/how-to-set-auto-increment-primary-key-in-postgresql - CREATE TABLE using AUTO INCREMENT (SERIAL)
-- 
